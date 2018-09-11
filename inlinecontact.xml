@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension version="2.5" type="plugin" group="content" method="upgrade">
+	<name>PLG_INLINECONTACT</name>
+	<author>Alexander Niklaus</author>
+	<authorEmail>support@an-software.net</authorEmail>
+	<authorUrl>https://www.an-software.net</authorUrl>
+	<copyright>Copyright (C) Alexander Niklaus. All rights reserved.</copyright>
+	<license>GNU General Public License version 2 or later</license>
+	<creationDate>July 2017</creationDate>
+	<version>1.0.0</version>
+	<description>PLG_INLINECONTACT_DESCRIPTION</description>
+	<files>
+		<filename plugin="inlinecontact">inlinecontact.php</filename>
+		<filename>index.html</filename>
+        <folder>field</folder>
+	</files>
+	<languages folder="language">
+		<language tag="en-GB">en-GB/en-GB.plg_content_inlinecontact.ini</language>
+		<language tag="en-GB">en-GB/en-GB.plg_content_inlinecontact.sys.ini</language>
+		<language tag="de-DE">de-DE/de-DE.plg_content_inlinecontact.ini</language>
+		<language tag="de-DE">de-DE/de-DE.plg_content_inlinecontact.sys.ini</language>
+	</languages>
+	<config>
+        <fields name="params">
+            <fieldset name="basic">
+                <field
+                        name="templates"
+                        label="PLG_INLINECONTACT_TEMPLATES_LABEL"
+                        type="inlinecontact"
+                />
+                <field
+                        name="hideempty"
+                        type="checkbox"
+                        label="PLG_INLINECONTACT_HIDEEMPTY_LABEL"
+                        description=""
+                        value="1"
+                />
+                <field
+                        name="templatecount"
+                        type="number"
+                        label="PLG_INLINECONTACT_TEMPLATECOUT_LABEL"
+                        description=""
+                        filter="int"
+                        validate="number"
+                        min="1"
+                        default="1"
+                />
+            </fieldset>
+        </fields>
+	</config>
+    <updateservers>
+        <server type="extension" priority="1" name="InlineContact">https://www.an-software.net/software/inlinecontact/extension.xml</server>
+    </updateservers>
+</extension>
