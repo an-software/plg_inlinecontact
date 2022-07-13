@@ -6,8 +6,8 @@
 	<authorUrl>https://www.an-software.net</authorUrl>
 	<copyright>Copyright (C) Alexander Niklaus. All rights reserved.</copyright>
 	<license>GNU General Public License version 2 or later</license>
-	<creationDate>July 2017</creationDate>
-	<version>1.0.0</version>
+	<creationDate>February 2022</creationDate>
+	<version>2.0.0</version>
 	<description>PLG_INLINECONTACT_DESCRIPTION</description>
 	<files>
 		<filename plugin="inlinecontact">inlinecontact.php</filename>
@@ -45,6 +45,21 @@
                         min="1"
                         default="1"
                 />
+
+				<field
+						name="nocontact"
+						type="text"
+						label="PLG_INLINECONTACT_NOCONTACT_LABEL"
+						description="PLG_INLINECONTACT_NOCONTACT_DESC"
+				/>
+
+				<field
+						name="contactnotfound"
+						type="text"
+						label="PLG_INLINECONTACT_CONTACTNOTFOUND_LABEL"
+						description="PLG_INLINECONTACT_CONTACTNOTFOUND_DESC"
+				/>
+				
             </fieldset>
         </fields>
 	</config>
