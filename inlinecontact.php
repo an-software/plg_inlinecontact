@@ -3,33 +3,45 @@
  * @package     Joomla.Plugin
  * @subpackage  Content.inlinecontact
  *
- * @copyright   Copyright (C) Alexander Niklaus. All rights reserved.
+ * @copyright   (C) Alexander Niklaus. All rights reserved.
  * @license     GNU General Public License version 2 or later
- * @link        https://www.an-software.net
+ * @link        https://an-software.net
  */
 
 defined('_JEXEC') or die;
 
+use Joomla\CMS\Application\CMSApplicationInterface;
 use Joomla\CMS\Plugin\CMSPlugin;
-use Joomla\Event\Event;
-use Joomla\Event\SubscriberInterface;
+use Joomla\Component\Contact\Site\Model\CategoryModel;
+use Joomla\Component\Contact\Site\Model\ContactModel;
+use Joomla\Component\Contact\Site\Model\FeaturedModel;
+use Joomla\Database\DatabaseDriver;
+use Joomla\Registry\Registry;
 use Joomla\String\StringHelper;
+use Joomla\CMS\Language\Text;
+use Joomla\Component\Fields\Administrator\Helper\FieldsHelper;
 
-class PlgContentInlineContact extends CMSPlugin implements SubscriberInterface
+class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 {
 	/**
+	 * @var    DatabaseDriver|null
 	 *
-	 * @since 1.0.0
-	 *
-	 * @var array
+	 * @since  2.1
 	 */
-	public $params;
+	protected $db = null; //?DatabaseDriver
 
 	/**
+	 * @var CMSApplicationInterface|null
+	 *
+	 * @since 3.0.0
+	 */
+	protected $app = null; //?CMSApplicationInterface
+
+
+	/**
+	 * @var bool
 	 *
 	 * @since 2.0.0
-	 *
-	 * @var bool
 	 */
 	protected $autoloadLanguage = true;
 
@@ -41,23 +53,59 @@ class PlgContentInlineContact extends CMSPlugin implements SubscriberInterface
 	 * @since 2.0.0
 	 *
 	 */
-	public static function getSubscribedEvents(): array
+	/*public static function getSubscribedEvents(): array
 	{
 		return [
 			'onContentPrepare' => 'onContentPrepare',
 		];
-	}
+	}*/
 
 	/**
 	 * @return bool
 	 * @since 2.0.0
 	 *
 	 */
-	public function onContentPrepare(Event $event)
+	/*public function onContentPrepare(Event $event)
 	{
 		$arguments = $event->getArguments();
 
 		return $this->handleOnContentPrepare($arguments[0], $arguments[1], $arguments[2]);
+	}*/
+
+
+	/**
+	 * Plugin that retrieves contact information for contact
+	 *
+	 * @param string    $context The context of the content being passed to the plugin.
+	 * @param mixed    &$row     An object with a "text" property
+	 * @param mixed     $params  Additional parameters. See {@see PlgContentContent()}.
+	 * @param integer   $page    Optional page number. Unused. Defaults to zero.
+	 *
+	 * @return  void
+	 *
+	 * @since 1.0.0
+	 */
+	public function onContentPrepare($context, &$row, $params, $page = 0)
+	{
+
+
+		// Return if we don't have valid params or don't link the author
+		if (!($params instanceof Registry))
+		{
+			return;
+		}
+
+		// Return if we don't have a valid article id
+		if (!isset($row->id) || !(int) $row->id)
+		{
+			return;
+		}
+
+		$lang      = $this->app->getLanguage();
+		$extension = 'com_contact';
+		$lang->load($extension);
+
+		$this->handleOnContentPrepare($context, $row, $params, $page);
 	}
 
 
@@ -67,123 +115,152 @@ class PlgContentInlineContact extends CMSPlugin implements SubscriberInterface
 	 * @param     $params
 	 * @param int $page
 	 *
-	 * @return bool
+	 * @return void
 	 * @since 1.0.0
 	 *
 	 */
 	private function handleOnContentPrepare($context, &$article, &$params, $page = 0)
 	{
+
+		// replace list placeholders
 		if (StringHelper::strpos($article->text, '{inlinecontactlist') !== false)
 		{
-			$regex         = "/{inlinecontactlist\s(\d*?)\s(\d*?)}/";
-			$article->text = preg_replace_callback($regex, array(&$this, '_contactlistReplaceCb'), $article->text);
+			$regex         = "/{inlinecontactlist\s+(\d+)\s+(\d+)\s*(\d*)\s*(\d*)}/";
+			$article->text = preg_replace_callback($regex, array(&$this, '_contactListReplaceCallback'), $article->text);
 		}
 
+		// replace normal opening / closing contact tags
 		if (StringHelper::strpos($article->text, '{/inlinecontact}') !== false)
 		{
 			$regex         = "/{inlinecontact\s(\d*?)}([\S\s]*?){\/inlinecontact}/";
-			$article->text = preg_replace_callback($regex, array(&$this, '_contactReplaceCb'), $article->text);
+			$article->text = preg_replace_callback($regex, array(&$this, '_contactReplaceCallback'), $article->text);
 		}
 
-		return true;
+		// replace contact single template tag
+		if (StringHelper::strpos($article->text, '{inlinecontact') !== false)
+		{
+			$regex         = "/{inlinecontact\s+(\d+)\s+(\d+)}/";
+			$article->text = preg_replace_callback($regex, array(&$this, '_contactReplaceTemplateCallback'), $article->text);
+		}
+
+
 	}
 
 
 	/**
-	 * @param $matches
+	 * @param                   $matches
+	 * @param stdClass|null     $contact
 	 *
-	 * @return array|string|string[]
+	 * @return array|string
 	 * @since 1.0.0
-	 *
 	 */
-	protected function _contactReplaceCb($matches)
+	protected function _contactReplaceCallback($matches, $contact = null)
 	{
-
-		$db = JFactory::getDBO();
-
-		if (!is_numeric($matches[1]))
+		if (!array_key_exists(1, $matches) || !is_numeric($matches[1]))
 		{
 			return '[invalid contact id]';
 		}
-		$contact_id   = intval($matches[1]);
-		$article_text = $matches[2];
+		$contactId = intval($matches[1]);
+
+		if (!array_key_exists(2, $matches))
+		{
+			return '[content missing]';
+		}
+		$articleText = $matches[2];
 
 
-		//Get all default fields of the contact
-		$query = 'SELECT * FROM #__contact_details WHERE published = 1 AND id = ' . $contact_id;
-		$db->setQuery($query);
-		$contact = $db->loadObject();
+		if (empty($contact))
+		{
+			$contact = $this->getContact($contactId);
+		}
 
 		if (!$contact)
 		{
-			return $this->params->get('contactnotfound', JText::_('PLG_INLINECONTACT_CONTACTNOTFOUND'));
+			return $this->params->get('contactnotfound', Text::_('PLG_INLINECONTACT_CONTACTNOTFOUND'));
 		}
-
-		//Get all custom fields of the contact
-		$query = 'SELECT #__fields.name, #__fields.label, #__fields.type, #__fields_values.item_id, #__fields_values.value FROM #__fields LEFT JOIN #__fields_values ON #__fields_values.field_id = #__fields.id AND #__fields_values.item_id = ' . $contact_id;
-		$db->setQuery($query);
-
-		$customfields = $db->loadObjectList();
 
 
 		//Default attribute names and types
-		$attributes = array('id', 'name', 'alias', 'con_position', 'address', 'suburb', 'state', 'country', 'postcode', 'telephone', 'fax', 'misc', 'image', 'email_to', 'mobile', 'webpage');
-		$types      = array('integer', 'text', 'text', 'text', 'textarea', 'text', 'text', 'text', 'text', 'text', 'text', 'editor', 'media', 'email', 'text', 'URL');
+		$attributes = ['id', 'name', 'alias', 'con_position', 'address', 'suburb', 'state', 'country', 'postcode', 'telephone', 'fax', 'misc', 'image', 'email_to', 'mobile', 'webpage'];
+		$types      = ['integer', 'text', 'text', 'text', 'textarea', 'text', 'text', 'text', 'text', 'text', 'text', 'editor', 'media', 'email', 'text', 'URL'];
+		$langKeys   = [false, false, false, 'POSITION', null, null, null, null, 'FIELD_INFORMATION_POSTCODE_LABEL', null, null, 'OTHER_INFORMATION', 'IMAGE_DETAILS', 'EMAIL_LABEL', null, null];
 
-		$find    = array();
-		$replace = array();
+
+		$contactData = [];
 
 		foreach ($attributes as $key => $attribute)
 		{
-			//TODO: label
-			$this->buildReplaceArray($find, $replace, $attribute, JText::_('PLG_INLINECONTACT_DEFLABEL_' . strtoupper($attribute)), $contact->$attribute, $types[$key]);
+
+			if ($langKeys[$key] === false)
+			{
+				$label = 'PLG_INLINECONTACT_DEFLABEL_' . strtoupper($attribute);
+			}
+			else
+			{
+				$langKey = $langKeys[$key] ?: strtoupper($attribute);
+				$label   = 'COM_CONTACT_' . strtoupper($langKey);
+			}
+
+			$contactData[$attribute] = [
+				'label' => Text::_($label),
+				'value' => $contact->$attribute,
+				'type'  => $types[$key]
+			];
 		}
 
-		foreach ($customfields as $customfield)
+		if (is_array($contact->jcfields))
 		{
-			$this->buildReplaceArray($find, $replace, $customfield->name, $customfield->label, $customfield->value, $customfield->type);
+			foreach ($contact->jcfields as $customField)
+			{
+				$contactData[$customField->name] = [
+					'label' => Text::_($customField->label),
+					'value' => $customField->value,
+					'type'  => $customField->type
+				];
+			}
 		}
 
-		return str_replace($find, $replace, $article_text);
+		// /\[(l_|lv_)?([A-Za-z_-]+)\s*(\|(.+?)\|)?\s*("(.+?)")?\s*?\]/
+		$articleText = str_replace("\xc2\xa0", ' ', $articleText);
+		return preg_replace_callback('/\[(l_|lv_)?([A-Za-z_-]+)\s*(?:(\?=|[?|])\s*((?:\\\?|\\\||[^?|])+?))?(?:\s*(\?=|[?|])\s*(.+?))?\s*\]/', function ($matches) use ($contactData) {
+			return $this->replaceContactPlaceholders($matches, $contactData);
+		}, $articleText);
 	}
 
 
 	/**
+	 * @param                   $matches
 	 *
-	 * @param        $find
-	 * @param        $replace
-	 * @param        $name
-	 * @param        $label
-	 * @param        $value
-	 * @param string $type
-	 *
-	 * @since 1.0.0
-	 *
+	 * @return array|string
+	 * @since 3.0.0
 	 */
-	private function buildReplaceArray(&$find, &$replace, $name, $label, $value, $type = '')
+	protected function _contactReplaceTemplateCallback($matches)
 	{
-		//Handle different field types
-		if ($type == 'media')
+		if (!array_key_exists(1, $matches) || !ctype_digit($matches[1]))
 		{
-			if (!empty($value))
-			{
-				$value = '<img src="' . $value . '" title="' . $label . '" alt="' . $label . '" />';
-			}
+			return '[invalid contact id]';
+		}
+		$contactId = intval($matches[1]);
+
+		if (!array_key_exists(2, $matches) || !ctype_digit($matches[2]))
+		{
+			return '[invalid template id]';
 		}
 
-		//value only
-		$find[]    = "[$name]";
-		$replace[] = ($this->params->get('hideempty') && $value == '') ? '' : $value;
+		$templateId   = intval($matches[2]);
+		$templates    = $this->params->get('stemplates');
+		$propertyName = 'stemplates' . ($templateId - 1);
+		if (!is_object($templates) || !property_exists($templates, $propertyName))
+		{
+			return '[invalid template id]';
+		}
 
-		//label only
-		$find[]    = "[l_$name]";
-		$replace[] = ($this->params->get('hideempty') && $value == '') ? '' : '<span class="plginlcon-label">' . $label . '</span>';
+		$contact = $this->getContact($contactId);
 
-		//label and value
-		$find[]    = "[lv_$name]";
-		$replace[] = ($this->params->get('hideempty') && $value == '') ? '' : '<span class="plginlcon-label">' . $label . '</span>: ' . $value;
+		$matches = array('', 0, $templates->$propertyName->content);
+
+		return $this->_contactReplaceCallback($matches, $contact);
 	}
-
 
 	/**
 	 *
@@ -193,45 +270,254 @@ class PlgContentInlineContact extends CMSPlugin implements SubscriberInterface
 	 * @since 1.0.0
 	 *
 	 */
-	protected function _contactlistReplaceCb($matches)
+	protected function _contactListReplaceCallback($matches)
 	{
 
 		if (!array_key_exists(1, $matches) || !is_numeric($matches[1]))
 		{
 			return '[invalid category id]';
 		}
-		$category_id = intval( $matches[1] );
+		$categoryId = intval($matches[1]);
 
 		if (!array_key_exists(2, $matches) || !is_numeric($matches[2]))
 		{
 			return '[invalid category id]';
 		}
-		$template_id = $matches[2];
-		$templates   = $this->params->get('templates');
-
-		if (!is_object($templates) || !property_exists($templates, $template_id))
+		$templateId   = $matches[2];
+		$templates    = $this->params->get('templates');
+		$propertyName = 'templates' . ($templateId - 1);
+		if (!is_object($templates) || !property_exists($templates, $propertyName))
 		{
 			return '[invalid template id]';
 		}
 
-		$db    = JFactory::getDBO();
-		$query = 'SELECT * FROM #__contact_details WHERE published = 1 AND catid =' . $category_id . ' ORDER BY ordering';
-		$db->setQuery($query);
-		$contacts = $db->loadObjectList();
 
-		if (!$contacts)
+		$sortMode = 0;
+		if (array_key_exists(3, $matches) && ctype_digit($matches[3]))
 		{
-			return $this->params->get('nocontact', JText::_('PLG_INLINECONTACT_NOCONTACT'));
+			$sortMode = intval($matches[3]);
+			if ($sortMode !== 1 && $sortMode !== 2)
+			{
+				$sortMode = 0;
+			}
 		}
 
-		$output = $templates->$template_id->b;
+		$filterMode = 0;
+		if (array_key_exists(4, $matches) && ctype_digit($matches[4]))
+		{
+			$filterMode = intval($matches[4]);
+			if ($filterMode !== 1 && $filterMode !== 2)
+			{
+				$filterMode = 0;
+			}
+		}
+
+
+		if ($filterMode === 1)
+		{
+			/** @var FeaturedModel $categoryModel */
+			$categoryModel = $this->app->bootComponent('com_contact')->getMVCFactory()
+				->createModel('Featured', 'Site', ['ignore_request' => true]);
+		}
+		else
+		{
+			/** @var CategoryModel $categoryModel */
+			$categoryModel = $this->app->bootComponent('com_contact')->getMVCFactory()
+				->createModel('Category', 'Site', ['ignore_request' => true]);
+		}
+
+		$categoryModel->setState('category.id', $categoryId);
+		$categoryModel->setState('filter.published', 1);
+
+		if ($filterMode !== 1)
+		{
+			if ($sortMode === 1)
+			{
+				$categoryModel->setState('list.ordering', 'featuredordering');
+			}
+			elseif ($sortMode === 2)
+			{
+				$categoryModel->setState('list.ordering', 'sortname');
+			}
+		}
+
+
+		$contacts = $categoryModel->getItems();
+
+
+		if (empty($contacts))
+		{
+			return $this->params->get('nocontact', Text::_('PLG_INLINECONTACT_NOCONTACT'));
+		}
+
+		$output = $templates->$propertyName->b;
 		foreach ($contacts as $contact)
 		{
-			$matches = array('', $contact->id, $templates->$template_id->t);
-			$output  .= $this->_contactReplaceCb($matches);
+			if ($filterMode === 2 && $contact->featured === 1)
+			{
+				continue;
+			}
+
+			$this->loadCustomFields($contact);
+
+			$matches = array('', $contact->id, $templates->$propertyName->t);
+			$output  .= $this->_contactReplaceCallback($matches, $contact);
 		}
-		$output .= $templates->$template_id->a;
+		$output .= $templates->$propertyName->a;
 
 		return $output;
 	}
+
+
+	/**
+	 * @param $matches
+	 * @param $contactData
+	 *
+	 * @return string
+	 * @since 3.0.0
+	 */
+	private function replaceContactPlaceholders($matches, $contactData)
+	{
+
+		if (!isset($matches[2]) || empty($matches[2]) || !array_key_exists($matches[2], $contactData))
+		{
+			return '';
+		}
+
+		$value = $contactData[$matches[2]]['value'];
+		$label = $contactData[$matches[2]]['label'];
+		$type  = $contactData[$matches[2]]['type'];
+
+		if ($type == 'media')
+		{
+			if (!empty($value))
+			{
+				$value = '<img src="' . $value . '" title="' . $label . '" alt="' . $label . '" />';
+			}
+		}
+
+
+		$defaultValue = null;
+		$template = '%s';
+		$overrideTemplate = null;
+
+		foreach([3,5] as $key) {
+			if (isset($matches[$key]) && isset($matches[$key+1])) {
+				if ($matches[$key] === '?') {
+					// match is default value
+					$defaultValue = str_replace(['\\?','\\|'],['?','|'],$matches[$key+1]);
+				} elseif($matches[$key] === '?=') {
+					// match is default value and overrides template
+					$defaultValue = '';
+					$overrideTemplate = str_replace(['\\?','\\|'],['?','|'],html_entity_decode(str_replace('%s','',trim($matches[$key+1]))));
+				} elseif($matches[$key] === '|') {
+					// match is default value
+					$template = str_replace(['\\?','\\|'],['?','|'],html_entity_decode(trim($matches[$key+1])));
+				}
+			}
+		}
+
+		$hideEmpty = false;
+		$emptyValue = empty($value);
+
+		// default value if empty
+		if ($emptyValue && $defaultValue !== null)
+		{
+			$value = $defaultValue;
+		}
+		else
+		{
+			// hide only if no default value is submitted
+			$hideEmpty = $this->params->get('hideempty', false) && $emptyValue;
+		}
+
+		$labelMode = $matches[1] ?? 0;
+
+		//value only
+		$output = $value;
+		$label  = '<span class="plginlcon-label">' . $label . '</span>';
+
+		if ($labelMode === 'l_')
+		{
+			//label only
+			$output = $label;
+		}
+		elseif ($labelMode === 'lv_')
+		{
+			//label and value
+			$output = $label . ': ' . $output;
+		}
+
+		try
+		{
+			if ($emptyValue && $overrideTemplate !== null) {
+				$output = $overrideTemplate;
+			} else {
+				$output = $hideEmpty ? '' : sprintf($template, $output);
+			}
+		}
+		catch (Throwable $t)
+		{
+			$output = '[error in HTML template]';
+		}
+
+		return $output;
+	}
+
+
+	/**
+	 * Retrieve Contact
+	 *
+	 * @param int $contactId ID of the contact
+	 *
+	 * @return mixed
+	 *
+	 * @since 3.0.0
+	 */
+	protected function getContact($contactId)
+	{
+		$model = new ContactModel();
+		try
+		{
+			$model->setState('filter.published', 1);
+			$contact = $model->getItem($contactId);
+		}
+		catch (Throwable $t)
+		{
+			return null;
+		}
+
+		// Get the custom fields
+		$this->loadCustomFields($contact);
+
+
+		return $contact;
+	}
+
+	/**
+	 * Adds the custom fields to a contact object
+	 *
+	 * @param stdClass|null $contact
+	 *
+	 * @since 3.0.0
+	 */
+	private function loadCustomFields(&$contact = null)
+	{
+
+		if (empty($contact))
+		{
+			return;
+		}
+
+		$contact->jcfields = [];
+
+		try
+		{
+			$contact->jcfields = FieldsHelper::getFields('com_contact.contact', $contact);
+		}
+		catch (Throwable $t)
+		{
+		}
+	}
+
 }

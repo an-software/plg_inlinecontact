@@ -1,33 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <extension version="2.5" type="plugin" group="content" method="upgrade">
-	<name>PLG_INLINECONTACT</name>
-	<author>Alexander Niklaus</author>
-	<authorEmail>support@an-software.net</authorEmail>
-	<authorUrl>https://www.an-software.net</authorUrl>
-	<copyright>Copyright (C) Alexander Niklaus. All rights reserved.</copyright>
-	<license>GNU General Public License version 2 or later</license>
-	<creationDate>February 2022</creationDate>
-	<version>2.0.0</version>
-	<description>PLG_INLINECONTACT_DESCRIPTION</description>
-	<files>
-		<filename plugin="inlinecontact">inlinecontact.php</filename>
-		<filename>index.html</filename>
+    <name>PLG_INLINECONTACT</name>
+    <author>Alexander Niklaus</author>
+    <authorEmail>support@an-software.net</authorEmail>
+    <authorUrl>https://an-software.net</authorUrl>
+    <copyright>Copyright (C) Alexander Niklaus. All rights reserved.</copyright>
+    <license>GNU General Public License version 2 or later</license>
+    <creationDate>October 2022</creationDate>
+    <version>3.0.3</version>
+    <description>PLG_INLINECONTACT_DESCRIPTION</description>
+    <files>
+        <filename plugin="inlinecontact">inlinecontact.php</filename>
         <folder>field</folder>
-	</files>
-	<languages folder="language">
-		<language tag="en-GB">en-GB/en-GB.plg_content_inlinecontact.ini</language>
-		<language tag="en-GB">en-GB/en-GB.plg_content_inlinecontact.sys.ini</language>
-		<language tag="de-DE">de-DE/de-DE.plg_content_inlinecontact.ini</language>
-		<language tag="de-DE">de-DE/de-DE.plg_content_inlinecontact.sys.ini</language>
-	</languages>
-	<config>
+    </files>
+    <languages folder="language">
+        <language tag="en-GB">en-GB/en-GB.plg_content_inlinecontact.ini</language>
+        <language tag="en-GB">en-GB/en-GB.plg_content_inlinecontact.sys.ini</language>
+        <language tag="de-DE">de-DE/de-DE.plg_content_inlinecontact.ini</language>
+        <language tag="de-DE">de-DE/de-DE.plg_content_inlinecontact.sys.ini</language>
+    </languages>
+    <config>
         <fields name="params">
             <fieldset name="basic">
-                <field
-                        name="templates"
-                        label="PLG_INLINECONTACT_TEMPLATES_LABEL"
-                        type="inlinecontact"
-                />
+
                 <field
                         name="hideempty"
                         type="checkbox"
@@ -35,35 +30,108 @@
                         description=""
                         value="1"
                 />
+
                 <field
-                        name="templatecount"
-                        type="number"
-                        label="PLG_INLINECONTACT_TEMPLATECOUT_LABEL"
-                        description=""
-                        filter="int"
-                        validate="number"
-                        min="1"
-                        default="1"
+                        name="nocontact"
+                        type="text"
+                        label="PLG_INLINECONTACT_NOCONTACT_LABEL"
+                        hint="PLG_INLINECONTACT_NOCONTACT_DESC"
                 />
 
-				<field
-						name="nocontact"
-						type="text"
-						label="PLG_INLINECONTACT_NOCONTACT_LABEL"
-						description="PLG_INLINECONTACT_NOCONTACT_DESC"
-				/>
+                <field
+                        name="contactnotfound"
+                        type="text"
+                        label="PLG_INLINECONTACT_CONTACTNOTFOUND_LABEL"
+                        hint="PLG_INLINECONTACT_CONTACTNOTFOUND_DESC"
+                />
 
-				<field
-						name="contactnotfound"
-						type="text"
-						label="PLG_INLINECONTACT_CONTACTNOTFOUND_LABEL"
-						description="PLG_INLINECONTACT_CONTACTNOTFOUND_DESC"
-				/>
-				
+            </fieldset>
+
+            <fieldset name="contacttemplates">
+
+
+                <field
+                        name="stemplates"
+                        type="subform"
+                        label="PLG_INLINECONTACT_SINGLE_TEMPLATES_LABEL"
+                        multiple="true"
+                >
+                    <form>
+                        <field
+                                name="number"
+                                type="inlinecontactnumber"
+                                label="PLG_INLINECONTACT_NUMBER_LABEL"
+                                readonly="true"
+                        />
+
+                        <field
+                                name="name"
+                                type="text"
+                                label="PLG_INLINECONTACT_NAME_LABEL"
+                        />
+                        <field
+                                name="content"
+                                type="editor"
+                                label="PLG_INLINECONTACT_CONTENT_LABEL"
+                                filter="raw"
+                        />
+                    </form>
+                </field>
+
+
+            </fieldset>
+
+            <fieldset name="listtemplates">
+
+
+                <field
+                        name="templates"
+                        type="subform"
+                        label="PLG_INLINECONTACT_TEMPLATES_LABEL"
+                        multiple="true"
+                >
+                    <form>
+                        <field
+                                name="number"
+                                type="inlinecontactnumber"
+                                label="PLG_INLINECONTACT_NUMBER_LABEL"
+                                readonly="true"
+                        />
+
+                        <field
+                                name="name"
+                                type="text"
+                                label="PLG_INLINECONTACT_NAME_LABEL"
+                        />
+                        <field
+                                name="b"
+                                type="textarea"
+                                label="PLG_INLINECONTACT_BEFORE_LABEL"
+                                filter="raw"
+                        />
+                        <field
+                                name="t"
+                                type="textarea"
+                                label="PLG_INLINECONTACT_ITEM_LABEL"
+                                filter="raw"
+                        />
+                        <field
+                                name="a"
+                                type="textarea"
+                                label="PLG_INLINECONTACT_AFTER_LABEL"
+                                filter="raw"
+                        />
+                    </form>
+                </field>
+
+
             </fieldset>
         </fields>
-	</config>
+    </config>
     <updateservers>
-        <server type="extension" priority="1" name="InlineContact">https://www.an-software.net/software/inlinecontact/extension.xml</server>
+        <server type="extension" priority="1" name="InlineContact">
+            https://an-software.net/software/inlinecontact/extension.xml
+        </server>
+        <server type="collection">https://an-software.net/software/inlinecontact/package.xml</server>
     </updateservers>
 </extension>
