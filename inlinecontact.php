@@ -87,16 +87,9 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 	 */
 	public function onContentPrepare($context, &$row, $params, $page = 0)
 	{
-
-
-		// Return if we don't have valid params or don't link the author
-		if (!($params instanceof Registry))
-		{
-			return;
-		}
-
-		// Return if we don't have a valid article id
-		if (!isset($row->id) || !(int) $row->id)
+		
+		// return if no text is available
+		if (empty($row->text))
 		{
 			return;
 		}

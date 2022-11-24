@@ -6,8 +6,8 @@
     <authorUrl>https://an-software.net</authorUrl>
     <copyright>Copyright (C) Alexander Niklaus. All rights reserved.</copyright>
     <license>GNU General Public License version 2 or later</license>
-    <creationDate>October 2022</creationDate>
-    <version>3.0.3</version>
+    <creationDate>November 2022</creationDate>
+    <version>3.0.4</version>
     <description>PLG_INLINECONTACT_DESCRIPTION</description>
     <files>
         <filename plugin="inlinecontact">inlinecontact.php</filename>

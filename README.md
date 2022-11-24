@@ -13,6 +13,7 @@ Features
 + Translated labels
 + Uses the core Joomla updater.
 + Can be extended by an editor button
++ Editor integration via additional [component](https://github.com/an-software/com_inlinecontact) and [plugin](https://github.com/an-software/plg_inlinecontactxtd)
 
 How it works
 ------------
