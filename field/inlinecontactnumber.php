@@ -8,7 +8,6 @@
  * @link        https://an-software.net
  */
 
-use Joomla\CMS\Form\Form;
 use Joomla\CMS\Language\Text;
 
 defined('_JEXEC') or die('Restricted access');
@@ -28,7 +27,7 @@ class JFormFieldInlineContactNumber extends JFormField
 	 * @return string
 	 * @since 3.0.0
 	 */
-	public function getInput()
+	public function getInput(): string
 	{
 		$number = Text::_('PLG_INLINECONTACT_NUMBER_EMPTY');
 		$matches = [];

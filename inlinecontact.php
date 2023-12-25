@@ -16,7 +16,6 @@ use Joomla\Component\Contact\Site\Model\CategoryModel;
 use Joomla\Component\Contact\Site\Model\ContactModel;
 use Joomla\Component\Contact\Site\Model\FeaturedModel;
 use Joomla\Database\DatabaseDriver;
-use Joomla\Registry\Registry;
 use Joomla\String\StringHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\Component\Fields\Administrator\Helper\FieldsHelper;
@@ -28,14 +27,14 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 	 *
 	 * @since  2.1
 	 */
-	protected $db = null; //?DatabaseDriver
+	protected ?DatabaseDriver $db = null;
 
 	/**
 	 * @var CMSApplicationInterface|null
 	 *
 	 * @since 3.0.0
 	 */
-	protected $app = null; //?CMSApplicationInterface
+	protected ?CMSApplicationInterface $app = null;
 
 
 	/**
@@ -79,13 +78,13 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 	 * @param string    $context The context of the content being passed to the plugin.
 	 * @param mixed    &$row     An object with a "text" property
 	 * @param mixed     $params  Additional parameters. See {@see PlgContentContent()}.
-	 * @param integer   $page    Optional page number. Unused. Defaults to zero.
+	 * @param int|null  $page    Optional page number. Unused. Defaults to zero.
 	 *
 	 * @return  void
 	 *
 	 * @since 1.0.0
 	 */
-	public function onContentPrepare($context, &$row, $params, $page = 0)
+	public function onContentPrepare(string $context, mixed &$row, mixed $params, ?int $page = 0): void
 	{
 		
 		// return if no text is available
@@ -103,16 +102,15 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 
 
 	/**
-	 * @param     $context
-	 * @param     $article
-	 * @param     $params
-	 * @param int $page
+	 * @param string   $context
+	 * @param mixed    $article
+	 * @param mixed    $params
+	 * @param int|null $page
 	 *
 	 * @return void
 	 * @since 1.0.0
-	 *
 	 */
-	private function handleOnContentPrepare($context, &$article, &$params, $page = 0)
+	private function handleOnContentPrepare(string $context, mixed &$article, mixed &$params, ?int $page = 0): void
 	{
 
 		// replace list placeholders
@@ -141,13 +139,13 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 
 
 	/**
-	 * @param                   $matches
-	 * @param stdClass|null     $contact
+	 * @param array         $matches
+	 * @param stdClass|null $contact
 	 *
 	 * @return array|string
 	 * @since 1.0.0
 	 */
-	protected function _contactReplaceCallback($matches, $contact = null)
+	protected function _contactReplaceCallback(array $matches, stdClass $contact = null): array|string
 	{
 		if (!array_key_exists(1, $matches) || !is_numeric($matches[1]))
 		{
@@ -199,6 +197,15 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 				'value' => $contact->$attribute,
 				'type'  => $types[$key]
 			];
+
+			if($types[$key] === 'media') {
+				// add placeholder to get only value instead of rendered img tag
+				$contactData[$attribute . '_raw'] = [
+					'label' => Text::_($label),
+					'value' => $contact->$attribute,
+					'type'  => 'text'
+				];
+			}
 		}
 
 		if (is_array($contact->jcfields))
@@ -222,12 +229,12 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 
 
 	/**
-	 * @param                   $matches
+	 * @param array $matches
 	 *
 	 * @return array|string
 	 * @since 3.0.0
 	 */
-	protected function _contactReplaceTemplateCallback($matches)
+	protected function _contactReplaceTemplateCallback(array $matches): array|string
 	{
 		if (!array_key_exists(1, $matches) || !ctype_digit($matches[1]))
 		{
@@ -257,13 +264,12 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 
 	/**
 	 *
-	 * @param $matches
+	 * @param array $matches
 	 *
 	 * @return string
 	 * @since 1.0.0
-	 *
 	 */
-	protected function _contactListReplaceCallback($matches)
+	protected function _contactListReplaceCallback(array $matches): string
 	{
 
 		if (!array_key_exists(1, $matches) || !is_numeric($matches[1]))
@@ -363,16 +369,16 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 
 
 	/**
-	 * @param $matches
-	 * @param $contactData
+	 * @param array $matches
+	 * @param array $contactData
 	 *
 	 * @return string
 	 * @since 3.0.0
 	 */
-	private function replaceContactPlaceholders($matches, $contactData)
+	private function replaceContactPlaceholders(array $matches, array $contactData): string
 	{
 
-		if (!isset($matches[2]) || empty($matches[2]) || !array_key_exists($matches[2], $contactData))
+		if (empty($matches[2]) || !array_key_exists($matches[2], $contactData))
 		{
 			return '';
 		}
@@ -441,6 +447,7 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 			$output = $label . ': ' . $output;
 		}
 
+		$deepRender = $this->params->get('deeprender', false);
 		try
 		{
 			if ($emptyValue && $overrideTemplate !== null) {
@@ -448,8 +455,13 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 			} else {
 				$output = $hideEmpty ? '' : sprintf($template, $output);
 			}
+			if($deepRender) {
+				$output = preg_replace_callback('/([^\\\\])\\$([a-zA-Z_]+)/', function ($matches) use ($contactData) {
+					return $this->deepReplaceContactPlaceholders($matches, $contactData);
+				}, $output);
+			}
 		}
-		catch (Throwable $t)
+		catch (Throwable)
 		{
 			$output = '[error in HTML template]';
 		}
@@ -459,6 +471,29 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 
 
 	/**
+	 * Replace variables inside the placeholders
+	 *
+	 * @param array $matches
+	 * @param array $contactData
+	 *
+	 * @return string
+	 *
+	 * @since 3.1.0
+	 */
+	private function deepReplaceContactPlaceholders(array $matches, array $contactData): string
+	{
+		if (empty($matches[2]) || !array_key_exists($matches[2], $contactData))
+		{
+			if(isset($matches[0])) {
+				return $matches[0];
+			}
+			return '';
+		}
+
+		return $matches[1].$contactData[$matches[2]]['value'];
+	}
+	
+	/**
 	 * Retrieve Contact
 	 *
 	 * @param int $contactId ID of the contact
@@ -467,7 +502,7 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 	 *
 	 * @since 3.0.0
 	 */
-	protected function getContact($contactId)
+	protected function getContact(int $contactId): mixed
 	{
 		$model = new ContactModel();
 		try
@@ -475,7 +510,7 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 			$model->setState('filter.published', 1);
 			$contact = $model->getItem($contactId);
 		}
-		catch (Throwable $t)
+		catch (Throwable)
 		{
 			return null;
 		}
@@ -490,11 +525,11 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 	/**
 	 * Adds the custom fields to a contact object
 	 *
-	 * @param stdClass|null $contact
+	 * @param mixed|null $contact
 	 *
 	 * @since 3.0.0
 	 */
-	private function loadCustomFields(&$contact = null)
+	private function loadCustomFields(mixed &$contact = null): void
 	{
 
 		if (empty($contact))
@@ -508,7 +543,7 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 		{
 			$contact->jcfields = FieldsHelper::getFields('com_contact.contact', $contact);
 		}
-		catch (Throwable $t)
+		catch (Throwable)
 		{
 		}
 	}

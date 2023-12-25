@@ -6,8 +6,8 @@
     <authorUrl>https://an-software.net</authorUrl>
     <copyright>Copyright (C) Alexander Niklaus. All rights reserved.</copyright>
     <license>GNU General Public License version 2 or later</license>
-    <creationDate>November 2022</creationDate>
-    <version>3.0.4</version>
+    <creationDate>December 2023</creationDate>
+    <version>3.1.1</version>
     <description>PLG_INLINECONTACT_DESCRIPTION</description>
     <files>
         <filename plugin="inlinecontact">inlinecontact.php</filename>
@@ -29,6 +29,14 @@
                         label="PLG_INLINECONTACT_HIDEEMPTY_LABEL"
                         description=""
                         value="1"
+                />
+
+                <field
+                        name="deeprender"
+                        type="checkbox"
+                        label="PLG_INLINECONTACT_DEEPRENDER_LABEL"
+                        description=""
+                        value="0"
                 />
 
                 <field
