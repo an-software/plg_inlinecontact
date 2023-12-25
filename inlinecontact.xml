@@ -7,7 +7,7 @@
     <copyright>Copyright (C) Alexander Niklaus. All rights reserved.</copyright>
     <license>GNU General Public License version 2 or later</license>
     <creationDate>December 2023</creationDate>
-    <version>3.1.1</version>
+    <version>3.2.0</version>
     <description>PLG_INLINECONTACT_DESCRIPTION</description>
     <files>
         <filename plugin="inlinecontact">inlinecontact.php</filename>

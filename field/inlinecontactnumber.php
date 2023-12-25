@@ -9,11 +9,12 @@
  */
 
 use Joomla\CMS\Language\Text;
+use Joomla\CMS\Form\FormField;
 
 defined('_JEXEC') or die('Restricted access');
 
 
-class JFormFieldInlineContactNumber extends JFormField
+class JFormFieldInlineContactNumber extends FormField
 {
 
 	/**
