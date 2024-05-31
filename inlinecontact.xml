@@ -6,12 +6,13 @@
     <authorUrl>https://an-software.net</authorUrl>
     <copyright>Copyright (C) Alexander Niklaus. All rights reserved.</copyright>
     <license>GNU General Public License version 2 or later</license>
-    <creationDate>December 2023</creationDate>
-    <version>3.2.0</version>
+    <creationDate>May 2024</creationDate>
+    <version>4.0.0</version>
     <description>PLG_INLINECONTACT_DESCRIPTION</description>
+    <namespace path="src">Joomla\Plugin\Content\InlineContact</namespace>
     <files>
-        <filename plugin="inlinecontact">inlinecontact.php</filename>
-        <folder>field</folder>
+        <folder plugin="inlinecontact">services</folder>
+        <folder>src</folder>
     </files>
     <languages folder="language">
         <language tag="en-GB">en-GB/en-GB.plg_content_inlinecontact.ini</language>
@@ -55,7 +56,7 @@
 
             </fieldset>
 
-            <fieldset name="contacttemplates">
+            <fieldset name="contacttemplates" addfieldprefix="Joomla\Plugin\Content\InlineContact\Field">
 
 
                 <field
@@ -89,7 +90,7 @@
 
             </fieldset>
 
-            <fieldset name="listtemplates">
+            <fieldset name="listtemplates" addfieldprefix="Joomla\Plugin\Content\InlineContact\Field">
 
 
                 <field

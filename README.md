@@ -17,16 +17,12 @@ Features
 
 How it works
 ------------
+
+### Single contact
+
 The plugin replaces all placeholders between the tags `{inlinecontact contactId} any text/ HTML containing placeholders {/inlinecontact}`, where contactId must be replaced with the respective id of the contact.
 
 `contactId`: ID of the contact 
-
-Also, contact categories can be displayed as a list (e.g. as a simple HTML table) using the `{inlinecontactlist categoryId templateNumber sortMode featuredMode}` tag.
-
-`categoryId`: ID of the category\
-`templateNumber`: Number of the template from the plugin settings\
-`sortMode`: Sorting of the list, optional, default (0): order as specified; 1: featured first; 2: sort by sortname\
-`featuredMode`: optional, default (0): order as specified in Joomla; 1: only featured; 2: only not featured
 
 Predefined templates can also be stored for individual contacts. They can later be pasted directly into the editor via the `{inlinecontact contactId templateNumber}` tag.
 
@@ -34,6 +30,24 @@ Predefined templates can also be stored for individual contacts. They can later 
 `templateNumber`: Number of the template from the plugin settings
 
 The templates can be specified as text or HTML and can contain any placeholders.
+
+### List of contacts
+
+Also, contact categories or tags can be displayed as a list (e.g. as a simple HTML table) using the `{inlinecontactlist categoryIdOrTagIds templateNumber sortMode featuredMode}` tag.
+
+`categoryIdOrTagIds`: ID of one category or a comma separated list of tag ids preceded by "t"\
+`templateNumber`: Number of the template from the plugin settings\
+`sortMode`: Sorting of the list, optional, default (0): order as specified; 1: featured first; 2: sort by sortname\
+`featuredMode`: optional, default (0): order as specified in Joomla; 1: only featured; 2: only not featured
+
+`sortMode` and `featuredMode` are optional.
+
+**Examples**:\
+Display only featured contacts of category 2 \
+{inlinecontactlist 2 1 0 1}
+
+Display all contacts tagged with the tags with the IDs 3, 4 and 5  \
+{inlinecontactlist t3,4,5 1}
 
 Available Placeholders
 ----------------------
