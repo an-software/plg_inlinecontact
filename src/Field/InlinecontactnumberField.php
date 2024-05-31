@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @package     Joomla.Plugin
  * @subpackage  Content.inlinecontact
@@ -8,13 +9,21 @@
  * @link        https://an-software.net
  */
 
-use Joomla\CMS\Language\Text;
+namespace Joomla\Plugin\Content\InlineContact\Field;
+
 use Joomla\CMS\Form\FormField;
+use Joomla\CMS\Language\Text;
 
-defined('_JEXEC') or die('Restricted access');
+// phpcs:disable PSR1.Files.SideEffects
+\defined('_JEXEC') or die;
+// phpcs:enable PSR1.Files.SideEffects
 
-
-class JFormFieldInlineContactNumber extends FormField
+/**
+ * Number Field class for the InlineContact Plugin.
+ *
+ * @since  3.3.0
+ */
+class InlinecontactnumberField extends FormField
 {
 
 	/**
@@ -37,6 +46,5 @@ class JFormFieldInlineContactNumber extends FormField
 		}
 		return '<input type="text" readonly class="form-control" value="' . $number . '">';
 	}
-	
 
 }

@@ -8,19 +8,25 @@
  * @link        https://an-software.net
  */
 
+namespace Joomla\Plugin\Content\InlineContact\Extension;
+
+// phpcs:disable PSR1.Files.SideEffects
 defined('_JEXEC') or die;
+// phpcs:enable PSR1.Files.SideEffects
 
 use Joomla\CMS\Application\CMSApplicationInterface;
 use Joomla\CMS\Plugin\CMSPlugin;
-use Joomla\Component\Contact\Site\Model\CategoryModel;
 use Joomla\Component\Contact\Site\Model\ContactModel;
-use Joomla\Component\Contact\Site\Model\FeaturedModel;
 use Joomla\Database\DatabaseDriver;
+use Joomla\Plugin\Content\InlineContact\Model\InlineContentCategoryModel;
+use Joomla\Plugin\Content\InlineContact\Model\InlineContentFeatureModel;
 use Joomla\String\StringHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\Component\Fields\Administrator\Helper\FieldsHelper;
+use stdClass;
+use Throwable;
 
-class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
+class InlineContact extends CMSPlugin //implements SubscriberInterface
 {
 	/**
 	 * @var    DatabaseDriver|null
@@ -116,7 +122,7 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 		// replace list placeholders
 		if (StringHelper::strpos($article->text, '{inlinecontactlist') !== false)
 		{
-			$regex         = "/{inlinecontactlist\s+(\d+)\s+(\d+)\s*(\d*)\s*(\d*)}/";
+			$regex         = "/{inlinecontactlist\s+((,?t?\d+)+)\s+(\d+)\s*(\d*)\s*(\d*)}/";
 			$article->text = preg_replace_callback($regex, array(&$this, '_contactListReplaceCallback'), $article->text);
 		}
 
@@ -272,17 +278,16 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 	protected function _contactListReplaceCallback(array $matches): string
 	{
 
-		if (!array_key_exists(1, $matches) || !is_numeric($matches[1]))
+		if (!array_key_exists(1, $matches))
 		{
-			return '[invalid category id]';
+			return '[missing category/tag id]';
 		}
-		$categoryId = intval($matches[1]);
 
-		if (!array_key_exists(2, $matches) || !is_numeric($matches[2]))
+		if (!array_key_exists(3, $matches) || !is_numeric($matches[3]))
 		{
-			return '[invalid category id]';
+			return '[missing template id]';
 		}
-		$templateId   = $matches[2];
+		$templateId   = $matches[3];
 		$templates    = $this->params->get('templates');
 		$propertyName = 'templates' . ($templateId - 1);
 		if (!is_object($templates) || !property_exists($templates, $propertyName))
@@ -292,9 +297,9 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 
 
 		$sortMode = 0;
-		if (array_key_exists(3, $matches) && ctype_digit($matches[3]))
+		if (array_key_exists(4, $matches) && ctype_digit($matches[4]))
 		{
-			$sortMode = intval($matches[3]);
+			$sortMode = intval($matches[4]);
 			if ($sortMode !== 1 && $sortMode !== 2)
 			{
 				$sortMode = 0;
@@ -302,9 +307,9 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 		}
 
 		$filterMode = 0;
-		if (array_key_exists(4, $matches) && ctype_digit($matches[4]))
+		if (array_key_exists(5, $matches) && ctype_digit($matches[5]))
 		{
-			$filterMode = intval($matches[4]);
+			$filterMode = intval($matches[5]);
 			if ($filterMode !== 1 && $filterMode !== 2)
 			{
 				$filterMode = 0;
@@ -314,19 +319,34 @@ class PlgContentInlineContact extends CMSPlugin //implements SubscriberInterface
 
 		if ($filterMode === 1)
 		{
-			/** @var FeaturedModel $categoryModel */
-			$categoryModel = $this->app->bootComponent('com_contact')->getMVCFactory()
-				->createModel('Featured', 'Site', ['ignore_request' => true]);
+			$categoryModel = new InlineContentFeatureModel( [
+				'ignore_request' => true,
+				'filter_fields' => []
+			]);
 		}
 		else
 		{
-			/** @var CategoryModel $categoryModel */
-			$categoryModel = $this->app->bootComponent('com_contact')->getMVCFactory()
-				->createModel('Category', 'Site', ['ignore_request' => true]);
+			$categoryModel = new InlineContentCategoryModel( [
+				'ignore_request' => true,
+				'filter_fields' => []
+			]);
 		}
-
-		$categoryModel->setState('category.id', $categoryId);
+		$categoryModel->setState('filter.max_category_levels', 0);
 		$categoryModel->setState('filter.published', 1);
+
+		// if single numeric => filter by category id
+		if(is_numeric($matches[1])) {
+			$categoryModel->setState('category.id', intval($matches[1]));
+		}
+		elseif (str_contains($matches[1],'t'))
+		{
+			// if string contains t => split and remove t => filter by tags
+			$tagIds = array_map('intval',explode(',',str_replace('t','',$matches[1])));
+			$categoryModel->setState('filter.tag', $tagIds);
+		} else {
+			return '[invalid category/tag id]';
+		}
+		
 
 		if ($filterMode !== 1)
 		{
